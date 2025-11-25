@@ -1,0 +1,27 @@
+Key Changes from your CNN Code:
+1. Architecture Shift: I have replaced the Conv2d (Audio) and Conv3d (Lip) blocks with Vision Transformer Encoders.
+2. Audio Processing (AST Approach): The audio spectrogram is treated as an image. It is split into 2D patches, flattened, and processed by a Transformer.
+3. Lip Processing (VideoViT Approach): The lip video clip (3D volume) is processed using "Tubelet" embeddings (3D Patches). This captures both spatial (shape of mouth) and temporal (movement over time) information simultaneously.
+4. CLS Token: I utilize a learnable [CLS] token for both streams. This token aggregates the global information of the audio or video clip to produce the final embedding vector.
+
+# Implementation Details:
+### Usage:
+You can initialize this model and pass data exactly as you did with the S class.
+model = SyncTransformer(aud_img_size=(128, 256), lip_img_size=(5, 96, 96))
+aud_embedding = model.forward_aud(audio_tensor)
+lip_embedding = model.forward_lip(lip_tensor)
+
+Input Dimensions:
+Transformers are sensitive to input image sizes because of the "Position Embeddings."
+I set defaults to aud_img_size=(128, 256) and lip_img_size=(5, 96, 96).
+Action Required: Check the .shape of your actual inputs in your dataloader. If your audio spectrograms are actually 13x20 (common in older SyncNets), pass aud_img_size=(13, 20) and decrease patch_size to something small like 1 or 2.
+
+Hyperparameters:
+embed_dim=256: The size of the internal vector for every patch.
+depth=4: The number of Transformer layers. Increase this for a smarter model, decrease for speed.
+num_heads=4: The number of attention heads.
+
+Positional Embeddings:
+The code initializes aud_pos_embed and lip_pos_embed with zeros. 
+These are learnable parameters. 
+During training, the model will learn which part of the vector represents the "top left" of the mouth versus the "bottom right," or the "start" of the audio clip versus the "end."
